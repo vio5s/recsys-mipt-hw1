@@ -7,7 +7,7 @@
 Ссылка: https://kuairand.com
 
 
-Запуск из корня репозитория:
+Запуск из папки hw1:
 
 ```bash
 pip install -r requirements.txt
