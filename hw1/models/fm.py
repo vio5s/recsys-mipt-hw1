@@ -2,6 +2,15 @@ import numpy as np
 from scipy import sparse
 
 
+def sample_negatives(rng, user_indices, positive_matrix):
+    negative = rng.integers(0, positive_matrix.shape[1], size=len(user_indices))
+    collisions = np.asarray(positive_matrix[user_indices, negative]).ravel() > 0
+    while np.any(collisions):
+        negative[collisions] = rng.integers(0, positive_matrix.shape[1], size=int(collisions.sum()))
+        collisions = np.asarray(positive_matrix[user_indices, negative]).ravel() > 0
+    return negative
+
+
 class FactorizationMachine:
     def __init__(self, n_factors=16, n_epochs=20, lr=0.01, reg_w=0.01, reg_v=0.01,
                  batch_size=512, random_state=42):
@@ -49,6 +58,7 @@ class FactorizationMachine:
         return self._X_users[user_indices] + self._X_items[item_indices]
 
     def fit(self, positive_matrix, user_features, item_features):
+        positive_matrix = sparse.csr_matrix(positive_matrix)
         n_users, n_items = positive_matrix.shape
         d_user, d_item = user_features.shape[1], item_features.shape[1]
         self._X_users = sparse.hstack(
@@ -68,7 +78,7 @@ class FactorizationMachine:
             for start in range(0, len(order), self.batch_size):
                 idx = order[start:start + self.batch_size]
                 u_batch = user_indices[idx]
-                j_batch = rng.integers(0, n_items, size=len(idx))
+                j_batch = sample_negatives(rng, u_batch, positive_matrix)
                 self._step_bpr(self._build_X(u_batch, item_indices[idx]), self._build_X(u_batch, j_batch))
 
         self.item_bias_, self.item_emb_, _ = self._forward(self._X_items)
